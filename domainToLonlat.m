@@ -64,7 +64,7 @@ function lonlat = domainToLonlat(domain, options)
         lonlat = feval(domain{:});
     elseif isnumeric(domain)
 
-        if ndism(domain) ~= 2 || size(domain, 2) ~= 2
+        if ndims(domain) ~= 2 || size(domain, 2) ~= 2
             error("Slepian:Domain:InvalidInputType", ...
                 "If domain is a numeric array, it must have two columns representing the coordinates of the region boundary, but got an array of size %s.", ...
                 mat2str(size(domain)));
