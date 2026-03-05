@@ -62,7 +62,7 @@ function [E, Vg, th, C, T, V] = grunbaum_new(radius, L, m, nth, grd, xver)
 
     % This is Grunbaum's original result, only for m>=0
     e = 1:n;
-    alpha =- (e + m) .* (e + m - 1);
+    alpha = -(e + m) .* (e + m - 1);
     gamma = sqrt((e + m) .^ 2 - m ^ 2) .* (((e + m) .^ 2 - (L + 1) ^ 2) ./ sqrt(4 * (e + m) .^ 2 - 1));
     T = tridiag(gamma(1:end - 1), alpha * b, gamma(1:end - 1));
 

@@ -1,5 +1,20 @@
 %% GLMALPHA_EFF - Computes the Slepian basis using the efficient way
 %
+% Syntax
+%   [G, V, N] = glmalpha_eff(domain, L)
+%
+% Input arguments
+%   domain - The geographic domain. Can be a string, cell array, numeric
+%       array, or GeoDomain object (see DOMAINTOLONLAT).
+%   L - Bandwidth (maximum angular degree) [default: 18]
+%   pcapConcThreshold - Minimum concentration value for a polar-cap
+%       Slepian function to be included [default: 0.3]
+%
+% Output arguments
+%   G - (L+1)^2 x numFuns matrix of Slepian basis coefficients
+%   V - numFuns x 1 vector of concentration eigenvalues (descending order)
+%   N - Shannon number: estimated number of well-concentrated functions
+%
 % Author
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
 
@@ -26,7 +41,7 @@ function [G, V, N] = glmalpha_eff(domain, L, options)
     % Step 3: compute the Slepian functions for the polar cap
     pcapConcThreshold = min(options.pcapConcThreshold, 1); % Threshold for well-concentrated Slepian functions
 
-    % Prepatation for Step 3c: Make the colatitude and longitude grid for evaluating the Slepian functions spatially
+    % Preparation for Step 3c: Make the colatitude and longitude grid for evaluating the Slepian functions spatially
     [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
         polarGridMask(radiusd, L, pLonlatd, resFactor = 16);
 

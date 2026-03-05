@@ -1,9 +1,9 @@
 %% ENCLOSINGCAP - Finds the centre and radius of the smallest enclosing spherical cap
 % Syntax
-%   [lonlat, radius] = enclosingCap(domain)
+%   [pcapLonlat, radius] = enclosingCap(domain)
 %
 % Output arguments
-%   lonlat - 1x2 vector of the longitude and latitude of the centre of the
+%   pcapLonlat - 1x2 vector of the longitude and latitude of the centre of the
 %       enclosing cap, in degrees
 %		The longitude is in the range [0, 360) and the latitude is in the
 % 		range [-90, 90].

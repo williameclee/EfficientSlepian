@@ -1,5 +1,23 @@
 %% DOMAINTOLONLAT - Converts input domain to longitude and latitude coordinates
 %
+% Syntax
+%   lonlat = domainToLonlat(domain)
+%
+% Input arguments
+%   domain - The domain to convert. Can be:
+%       - A string or char: name of a function returning boundary coordinates
+%       - A cell array: {funcName, args...} passed to feval
+%       - A numeric Nx2 array: longitude-latitude boundary coordinates
+%       - A GeoDomain object
+%   AddAnchors - Whether to add anchor points to the boundary [default: false]
+%   InputUnit - Unit of the input coordinates ('degrees' or 'radians')
+%       [default: 'degrees']
+%   OutputUnit - Unit of the output coordinates ('degrees' or 'radians')
+%       [default: 'degrees']
+%
+% Output arguments
+%   lonlat - Nx2 array of boundary coordinates [longitude, latitude]
+%
 % Author
 %	2026/03/04, En-Chi Lee (williameclee@arizona.edu)
 
@@ -43,14 +61,11 @@ function lonlat = domainToLonlat(domain, options)
         error("Domain must be a string, cell array, numeric array, or GeoDomain object.");
     end
 
-    % Format the coordinates into a consistent, simple format
-    % Is this necessary?
-    % [lat, lon] = flatearthpoly(lonlat(:, 2), lonlat(:, 1));
-    % lonlat = [lon, lat];
-
     if any(lonlat(:, 1) < 0)
         warning("Negative longitudes detected. Ensure that the longitude convention is consistent across all inputs and outputs.");
-    elseif any(lonlat(:, 1) > 360)
+    end
+
+    if any(lonlat(:, 1) > 360)
         warning("Longitudes greater than 360 detected. Ensure that the longitude convention is consistent across all inputs and outputs.");
     end
 

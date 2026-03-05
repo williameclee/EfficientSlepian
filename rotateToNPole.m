@@ -1,5 +1,22 @@
 %% ROTATETONPOLE - Rotates a domain to the North Pole
 %
+% Syntax
+%   pLonlat = rotateToNPole(domain, pcapLonlat)
+%   [pLonlat, pcapLonlat, radius] = rotateToNPole(domain, pcapLonlat)
+%
+% Input arguments
+%   domain - The domain to rotate. Can be a string, cell array, numeric
+%       array, or GeoDomain object (see DOMAINTOLONLAT).
+%   pcapLonlat - 1x2 vector of the longitude and latitude of the centre of
+%       the enclosing cap, in degrees [default: auto-computed]
+%
+% Output arguments
+%   pLonlat - Nx2 array of the longitude and latitude of the rotated
+%       domain boundary
+%   pcapLonlat - 1x2 vector of the longitude and latitude of the centre
+%       of the enclosing cap (in the output unit)
+%   radius - scalar radius of the enclosing cap (in the output unit)
+%
 % Author
 %	2026/03/04, En-Chi Lee (williameclee@arizona.edu)
 
@@ -41,9 +58,10 @@ function [pLonlat, pcapLonlat, radius] = rotateToNPole(domain, pcapLonlat, optio
 
     if strcmp(options.OutputUnit, "degrees")
         radius = rad2deg(radius);
+        pcapLonlat = rad2deg(pcapLonlat);
     elseif strcmp(options.OutputUnit, "radians")
         pLonlat = deg2rad(pLonlat);
-        pcapLonlat = deg2rad(pcapLonlat);
+        % pcapLonlat is already in radians
     end
 
     if nargout > 0

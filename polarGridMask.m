@@ -1,5 +1,24 @@
 %% POLARGRIDMASK - Creates a grid in the polar cap and a corresponding domain mask
 %
+% Syntax
+%   [lon, lat, res, weight, mask] = polarGridMask(radius, L, pLonlat)
+%   [lon, lat, res, weight, mask] = polarGridMask(radius, L, pLonlat, resFactor=N)
+%
+% Input arguments
+%   radius - scalar radius of the polar cap, in degrees
+%   L - bandwidth (maximum angular degree), used to determine grid resolution
+%   pLonlat - Nx2 array of the rotated domain boundary [longitude, latitude]
+%       in degrees
+%   resFactor - resolution scaling factor; higher values produce finer
+%       grids [default: 8]
+%
+% Output arguments
+%   lon - 1xM vector of grid longitudes, in degrees
+%   lat - Nx1 vector of grid latitudes, in degrees
+%   res - scalar grid resolution, in degrees
+%   weight - NxM matrix of integration weights (solid-angle element)
+%   mask - NxM logical matrix, true inside the rotated domain
+%
 % Author
 %	2026/03/04, En-Chi Lee (williameclee@arizona.edu)
 
