@@ -5,17 +5,38 @@
 %   [pLonlat, pcapLonlat, radius] = rotateToNPole(domain, pcapLonlat)
 %
 % Input arguments
-%   domain - The domain to rotate. Can be a string, cell array, numeric
-%       array, or GeoDomain object (see DOMAINTOLONLAT).
-%   pcapLonlat - 1x2 vector of the longitude and latitude of the centre of
-%       the enclosing cap, in degrees [default: auto-computed]
+%   domain - Domain to rotate
+%     - A string or char: name of a function returning boundary coordinates
+%       For example, "antarctica" (from slepian_delta) or "npacific" (from
+%       ULMO)
+%     - A cell array: {funcName, args...} passed to feval
+%       Like the above, funcName is the name of a function that returns
+%       boundary coordinates, and args are additional arguments to that
+%       function.
+%     - A numeric Nx2 array: longitude-latitude boundary coordinates
+%       The unit is specified by the InputUnit option.
+%     - A GeoDomain object (from the ULMO package)
+%       See DOMAONTOLONLAT for details.
+%   pcapLonlat (optional) - 1x2 vector of the longitude and latitude of the
+%       centre of the enclosing cap, in degrees
+%       If not provided, the function will compute the enclosing cap and
+%       use its centre.
+%   InputUnit (name-value) - Unit of the input coordinates ("degrees" or
+%       "radians")
+%       This option only matters if the input domain is a numeric array.
+%       The default unit is "degrees".
+%   OutputUnit (name-value) - Unit of the output coordinates ("degrees" or
+%       "radians")
+%       The default unit is "degrees".
 %
 % Output arguments
-%   pLonlat - Nx2 array of the longitude and latitude of the rotated
-%       domain boundary
-%   pcapLonlat - 1x2 vector of the longitude and latitude of the centre
-%       of the enclosing cap (in the output unit)
-%   radius - scalar radius of the enclosing cap (in the output unit)
+%   pLonlat - [longitude, latitude] coordinates of the rotated domain
+%       boundary
+%       Size: [N x 2]
+%   pcapLonlat - [longitude, latitude] coordinates of the centre of the
+%       enclosing cap
+%       Size: [1 x 2]
+%   radius - Radius of the enclosing cap (in the output unit)
 %
 % Author
 %	2026/03/04, En-Chi Lee (williameclee@arizona.edu)
@@ -25,8 +46,10 @@ function [pLonlat, pcapLonlat, radius] = rotateToNPole(domain, pcapLonlat, optio
     arguments (Input)
         domain
         pcapLonlat (1, 2) {mustBeNumeric, mustBeReal} = [-999, -999]
-        options.InputUnit {mustBeMember(options.InputUnit, {'degrees', 'radians'})} = 'degrees'
-        options.OutputUnit {mustBeMember(options.OutputUnit, {'degrees', 'radians'})} = 'degrees'
+        options.InputUnit ...
+            {mustBeMember(options.InputUnit, {'degrees', 'radians'})} = 'degrees'
+        options.OutputUnit ...
+            {mustBeMember(options.OutputUnit, {'degrees', 'radians'})} = 'degrees'
     end
 
     arguments (Output)
@@ -45,7 +68,8 @@ function [pLonlat, pcapLonlat, radius] = rotateToNPole(domain, pcapLonlat, optio
 
     pcapCollon = [pi / 2 - pcapLonlat(2), pcapLonlat(1)];
 
-    lonlat = domainToLonlat(domain, "AddAnchors", true, "InputUnit", options.InputUnit, "OutputUnit", "radians");
+    lonlat = domainToLonlat(domain, "AddAnchors", true, ...
+        "InputUnit", options.InputUnit, "OutputUnit", "radians");
     collon = [pi / 2 - lonlat(:, 2), lonlat(:, 1)];
 
     %% Rotation to 0° longitude and 90° latitude (North Pole)
@@ -61,7 +85,6 @@ function [pLonlat, pcapLonlat, radius] = rotateToNPole(domain, pcapLonlat, optio
         pcapLonlat = rad2deg(pcapLonlat);
     elseif strcmp(options.OutputUnit, "radians")
         pLonlat = deg2rad(pLonlat);
-        % pcapLonlat is already in radians
     end
 
     if nargout > 0
