@@ -16,7 +16,7 @@
 %     - A numeric Nx2 array: longitude-latitude boundary coordinates
 %       The unit is specified by the InputUnit option.
 %     - A GeoDomain object (from the ULMO package)
-%       See DOMAONTOLONLAT for details.
+%       See DOMAINTOLONLAT for details.
 %   pcapLonlat (optional) - 1x2 vector of the longitude and latitude of the
 %       centre of the enclosing cap, in degrees
 %       If not provided, the function will compute the enclosing cap and

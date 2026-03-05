@@ -15,7 +15,7 @@
 %     - A numeric Nx2 array: longitude-latitude boundary coordinates
 %       The unit is specified by the InputUnit option.
 %     - A GeoDomain object (from the ULMO package)
-%       See DOMAONTOLONLAT for details.
+%       See DOMAINTOLONLAT for details.
 %   L (optional) - Bandwidth (maximum angular degree)
 %       The default degree is 18.
 %   pcapConcThreshold (name-value) - Minimum energy concentration value for

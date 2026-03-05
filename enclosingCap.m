@@ -13,7 +13,7 @@
 %     - A numeric Nx2 array: longitude-latitude boundary coordinates
 %       The unit is specified by the InputUnit option.
 %     - A GeoDomain object (from the ULMO package)
-%       See DOMAONTOLONLAT for details.
+%       See DOMAINTOLONLAT for details.
 %   InputUnit (name-value) - Unit of the input coordinates ("degrees" or
 %       "radians")
 %       This option only matters if the input domain is a numeric array.
