@@ -28,7 +28,7 @@
 %   V - Concentration eigenvalues in descending order
 %       Size: [numFuns x 1]
 %   N - Shannon number
-%       Estimated number of well-concentrated functions, propotional to the
+%       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
 %
 % See also
