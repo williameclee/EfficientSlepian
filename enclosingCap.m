@@ -1,13 +1,31 @@
 %% ENCLOSINGCAP - Finds the centre and radius of the smallest enclosing spherical cap
 % Syntax
-%   [pcapLonlat, radius] = enclosingCap(domain)
+%   [lonlat, radius] = enclosingCap(domain)
+%
+% Input arguments
+%     - A string or char: name of a function returning boundary coordinates
+%       For example, "antarctica" (from slepian_delta) or "npacific" (from
+%       ULMO)
+%     - A cell array: {funcName, args...} passed to feval
+%       Like the above, funcName is the name of a function that returns
+%       boundary coordinates, and args are additional arguments to that
+%       function.
+%     - A numeric Nx2 array: longitude-latitude boundary coordinates
+%       The unit is specified by the InputUnit option.
+%     - A GeoDomain object (from the ULMO package)
+%       See DOMAONTOLONLAT for details.
+%   InputUnit (name-value) - Unit of the input coordinates ("degrees" or
+%       "radians")
+%       This option only matters if the input domain is a numeric array.
+%       The default unit is "degrees".
+%   OutputUnit (name-value) - Unit of the output coordinates ("degrees" or
+%       "radians")
+%       The default unit is "degrees".
 %
 % Output arguments
-%   pcapLonlat - 1x2 vector of the longitude and latitude of the centre of the
-%       enclosing cap, in degrees
-%		The longitude is in the range [0, 360) and the latitude is in the
-% 		range [-90, 90].
-%   radius - scalar value of the radius of the enclosing cap, in degrees
+%   lonlat - Longitude and latitude of the centre of the enclosing cap, in
+%       the output unit.
+%   radius - Radius of the enclosing cap, in the output unit.
 %
 % Author
 %	2026/03/04, En-Chi Lee (williameclee@arizona.edu)
