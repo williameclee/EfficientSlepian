@@ -1,7 +1,9 @@
 %% POLARGRIDMASK - Creates grid for the polar cap and domain mask
 %
 % Syntax
+%   [lon, lat, res, weight, mask] = polarGridMask(radius, pLonlat)
 %   [lon, lat, res, weight, mask] = polarGridMask(radius, pLonlat, L)
+%   [lon, lat, res, weight, mask] = polarGridMask(__, "Name", value)
 %
 % Input arguments
 %   radius - Scalar radius of the polar cap, in degrees

@@ -1,6 +1,7 @@
 %% ENCLOSINGCAP - Finds the centre and radius of the smallest enclosing spherical cap
 % Syntax
 %   [lonlat, radius] = enclosingCap(domain)
+%   [lonlat, radius] = enclosingCap(domain, "Name", value)
 %
 % Input arguments
 %     - A string or char: name of a function returning boundary coordinates

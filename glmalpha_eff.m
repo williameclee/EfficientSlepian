@@ -2,6 +2,7 @@
 %
 % Syntax
 %   [G, V, N] = glmalpha_eff(domain, L)
+%   [G, V, N] = glmalpha_eff(domain, L, "Name", value)
 %
 % Input arguments
 %   domain - Domain to convert

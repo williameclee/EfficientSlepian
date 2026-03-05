@@ -3,6 +3,7 @@
 % Syntax
 %   pLonlat = rotateToNPole(domain, pcapLonlat)
 %   [pLonlat, pcapLonlat, radius] = rotateToNPole(domain, pcapLonlat)
+%   [pLonlat, pcapLonlat, radius] = rotateToNPole(__, "Name", value)
 %
 % Input arguments
 %   domain - Domain to rotate
@@ -17,8 +18,8 @@
 %       The unit is specified by the InputUnit option.
 %     - A GeoDomain object (from the ULMO package)
 %       See DOMAINTOLONLAT for details.
-%   pcapLonlat (optional) - 1x2 vector of the longitude and latitude of the
-%       centre of the enclosing cap, in the specified unit (see InputUnit).
+%   pcapLonlat (optional) - [longitude, latitude] of the centre of the 
+%       enclosing cap, in the specified unit (see InputUnit).
 %       If not provided, the function will compute the enclosing cap and
 %       use its centre.
 %   InputUnit (name-value) - Unit of the input coordinates ("degrees" or

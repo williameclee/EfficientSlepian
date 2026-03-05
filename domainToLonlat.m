@@ -2,6 +2,7 @@
 %
 % Syntax
 %   lonlat = domainToLonlat(domain)
+%   lonlat = domainToLonlat(domain, "Name", value)
 %
 % Input arguments
 %   domain - Domain to convert
@@ -28,7 +29,8 @@
 %       The default unit is "degrees".
 %
 % Output arguments
-%   lonlat - Nx2 array of boundary coordinates [longitude, latitude]
+%   lonlat - [longitude, latitude] coordinates of the domain boundary
+%       Size: [N x 2]
 %
 % See also
 %   GEODOMAIN (from ULMO)
