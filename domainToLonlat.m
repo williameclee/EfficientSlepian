@@ -18,7 +18,7 @@
 %   AddAnchors (name-value) - Whether to add anchor points to the boundary
 %       Adding anchor points along long straight boundaries can help make
 %       sure the shape stays intact when rotated.
-%       The default behaciour is FALSE.
+%       The default behaviour is FALSE.
 %   InputUnit (name-value) - Unit of the input coordinates ("degrees" or
 %       "radians")
 %       This option only matters if the input domain is a numeric array.
