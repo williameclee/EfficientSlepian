@@ -1,2 +1,9 @@
 # Unpublished code by Alice Bates or Lisa 
 Bates/
+
+# Symbolic links to other repos
+slepian_alpha
+ulmo
+
+# Random testing files
+*_test.m
