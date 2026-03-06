@@ -1,9 +1,10 @@
 %% ENCLOSINGCAP - Finds the centre and radius of the smallest enclosing spherical cap
 % Syntax
-%   [lonlat, radius] = enclosingCap(domain)
-%   [lonlat, radius] = enclosingCap(domain, "Name", value)
+%   [pacpLonlat, radius] = enclosingCap(domain)
+%   [pacpLonlat, radius] = enclosingCap(domain, "Name", value)
 %
 % Input arguments
+%   domain - Domain to be enclosed by the cap
 %     - A string or char: name of a function returning boundary coordinates
 %       For example, "antarctica" (from slepian_delta) or "npacific" (from
 %       ULMO)
@@ -24,8 +25,9 @@
 %       The default unit is "degrees".
 %
 % Output arguments
-%   lonlat - Longitude and latitude of the centre of the enclosing cap, in
-%       the output unit.
+%   pacpLonlat - Longitude and latitude of the centre of the enclosing cap,
+%       in the output unit.
+%       Size: [1 x 2]
 %   radius - Radius of the enclosing cap, in the output unit.
 %
 % Author
@@ -35,8 +37,10 @@ function [pcapLonlat, radius] = enclosingCap(domain, options)
 
     arguments (Input)
         domain
-        options.InputUnit {mustBeMember(options.InputUnit, {'degrees', 'radians'})} = 'degrees'
-        options.OutputUnit {mustBeMember(options.OutputUnit, {'degrees', 'radians'})} = 'degrees'
+        options.InputUnit ...
+            {mustBeMember(options.InputUnit, {'degrees', 'radians'})} = 'degrees'
+        options.OutputUnit ...
+            {mustBeMember(options.OutputUnit, {'degrees', 'radians'})} = 'degrees'
     end
 
     arguments (Output)
@@ -44,7 +48,8 @@ function [pcapLonlat, radius] = enclosingCap(domain, options)
         radius (1, 1) {mustBeNumeric, mustBePositive}
     end
 
-    lonlat = domainToLonlat(domain, "AddAnchors", true, "InputUnit", options.InputUnit, "OutputUnit", "degrees");
+    lonlat = domainToLonlat(domain, "AddAnchors", true, ...
+        "InputUnit", options.InputUnit, "OutputUnit", "degrees");
 
     % Find the longest distance between 2 points on the boundary
     maxDists = zeros(length(lonlat), 1);
