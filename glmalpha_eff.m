@@ -62,13 +62,13 @@
 % Output arguments
 %   G - Projection matrix from the Slepian basis to the spherical harmonics
 %       Size: [(L+1)^2 x truncation]
-%   V - Cell array of concentration eigenvalues in descending order
-%       The first element contains the eigenvalues of the polar cap Slepian
-%       functions, and the second element contains the eigenvalues of the
+%   V - Concentration eigenvalues in descending order
+%       The first row contains the eigenvalues of the polar cap Slepian
+%       functions, and the second row contains the eigenvalues of the
 %       Slepian functions for the rotated domain relative to the polar cap
 %       Slepian basis. That is, they are not comparable to the eigenvalues
 %       from GLMALPHA.
-%       Size: {[numFuns x 1], [truncation x 1]}
+%       Size: [2 x truncation]
 %   N - Shannon number
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
@@ -80,6 +80,7 @@
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
 % Last modified
 %	2026/03/06, En-Chi Lee (williameclee@arizona.edu)
+%     - Changed eigenvalues (V) output format
 %     - Added truncation and rotb arguments
 
 function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
@@ -96,7 +97,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Output)
         G (:, :) {mustBeReal}
-        V (1, 2) cell
+        V (2, :) cell
         N (1, 1) {mustBePositive}
     end
 
@@ -210,7 +211,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
         G = pG;
     end
 
-    V = {pcapConcs(:), pSlepConcs(:)}; % Concentrations (eigenvalues)
+    V = [pcapConcs(:), pSlepConcs(:)]; % Concentrations (eigenvalues)
     N = (L + 1) ^ 2 * spharea(pLonlatd);
 
     % Truncate the basis if asked
@@ -222,7 +223,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
         if truncation <= numFuns
             G = G(:, 1:truncation);
-            V{2} = V{2}(1:truncation);
+            V = V(:, 1:truncation);
         else
             warning( ...
                 "Truncation level (%d) is larger than the number of computed functions (%d). No truncation applied.", truncation, numFuns);
