@@ -18,14 +18,15 @@
 %
 % Syntax
 %   [G, V, N] = glmalpha_eff(domain, L)
-%   [G, V, N] = glmalpha_eff(domain, L, "Name", value)
+%   [G, V, N] = glmalpha_eff(domain, L, truncation, rotb)
+%   [G, V, N] = glmalpha_eff(__, "Name", value)
 %
 % Input arguments
 %   domain - Domain to convert
 %     - A string or char: name of a function returning boundary coordinates
 %       For example, "antarctica" (from slepian_delta) or "npacific" (from
 %       ULMO)
-%     - A cell array: {funcName, args...} passed to feval
+%     - A cell array: {funcName, args...} passed to FEVAL
 %       Like the above, funcName is the name of a function that returns
 %       boundary coordinates, and args are additional arguments to that
 %       function.
@@ -35,6 +36,17 @@
 %       See DOMAINTOLONLAT for details.
 %   L (optional) - Bandwidth (maximum angular degree)
 %       The default degree is 18.
+%   truncation (optional) - Number of final Slepian functions to return, in
+%       descending order of concentration
+%       If not specified, all computed functions will be returned; if set
+%       to "N" (case-insensitive), the number of functions will be
+%       determined by the Shannon number (N).
+%       The default truncation level is not specified (i.e. no truncation).
+%   rotb (optional) - Whether to rotate the Slepian functions back to the
+%       original domain
+%       If false, the returned projection matrix will be for the domain
+%       rotated to the north pole.
+%       The default value is TRUE.
 %   pcapConcThreshold (name-value) - Minimum energy concentration value for
 %       a polar-cap Slepian function to not be discarded.
 %       The default value is 0.3.
@@ -49,9 +61,15 @@
 %
 % Output arguments
 %   G - Projection matrix from the Slepian basis to the spherical harmonics
-%       Size: [(L+1)^2 x numFuns]
+%       Size: [(L+1)^2 x numFuns], where numFuns is the number of Slepian
+%       functions returned (after truncation, if applicable)
 %   V - Concentration eigenvalues in descending order
-%       Size: [numFuns x 1]
+%       The first row contains the eigenvalues of the polar cap Slepian
+%       functions, and the second row contains the eigenvalues of the
+%       Slepian functions for the rotated domain relative to the polar cap
+%       Slepian basis. That is, they are not comparable to the eigenvalues
+%       from GLMALPHA.
+%       Size: [2 x numFuns]
 %   N - Shannon number
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
@@ -61,12 +79,18 @@
 %
 % Author
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
+% Last modified
+%	2026/03/06, En-Chi Lee (williameclee@arizona.edu)
+%     - Changed eigenvalues (V) output format
+%     - Added truncation and rotb arguments
 
-function [G, V, N] = glmalpha_eff(domain, L, options)
+function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Input)
         domain
         L (1, 1) {mustBeInteger, mustBePositive} = 18
+        truncation (1, 1) = NaN
+        rotb (1, 1) {mustBeNumericOrLogical} = true
         options.pcapConcThreshold (1, 1) ...
             {mustBeInRange(options.pcapConcThreshold, 0, 1, "exclude-lower")} = 0.3
         options.resFactor (1, 1) {mustBePositive} = 8
@@ -74,8 +98,25 @@ function [G, V, N] = glmalpha_eff(domain, L, options)
 
     arguments (Output)
         G (:, :) {mustBeReal}
-        V (:, 1) {mustBeNonnegative}
+        V (2, :) {mustBeReal, mustBeInRange(V, 0, 1)}
         N (1, 1) {mustBePositive}
+    end
+
+    if isnumeric(truncation)
+
+        if ~isnan(truncation) && (truncation <= 0)
+            error("Truncation must be positive, but got %s.", num2str(truncation));
+        end
+
+    elseif (isstring(truncation) || ischar(truncation))
+
+        if ~strcmpi(truncation, "N")
+            error("Truncation must be either a positive value or the string 'N', but got '%s'.", truncation);
+        end
+
+    else
+        error("Truncation must be either a positive value or the string 'N', but got class %s.", ...
+            upper(class(truncation)));
     end
 
     pcapConcThreshold = options.pcapConcThreshold;
@@ -178,10 +219,33 @@ function [G, V, N] = glmalpha_eff(domain, L, options)
     pG = pcapG * pSlepG;
 
     % Rotate the Slepian functions back to the original domain
-    G = rotateG(L, pG, pcapLonlatd);
+    if rotb
+        G = rotateG(L, pG, pcapLonlatd);
+    else
+        G = pG;
+    end
 
-    V = pSlepConcs(:); % Concentrations (eigenvalues)
+    V = [pcapConcs(:), pSlepConcs(:)].'; % Concentrations (eigenvalues)
     N = (L + 1) ^ 2 * spharea(pLonlatd);
+
+    % Truncate the basis if asked
+    if (isstring(truncation) || ischar(truncation)) && strcmpi(truncation, "N")
+        truncation = round(N);
+    end
+
+    if ~isnan(truncation)
+        truncation = round(truncation); % In case it's a non-integer numeric value
+
+        if truncation <= numFuns
+            G = G(:, 1:truncation);
+            V = V(:, 1:truncation);
+        else
+            warning( ...
+                "Truncation level (%d) is larger than the number of computed functions (%d). No truncation applied.", truncation, numFuns);
+        end
+
+    end
+
 end
 
 %% Subfunctions
