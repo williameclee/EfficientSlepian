@@ -61,7 +61,7 @@
 %
 % Output arguments
 %   G - Projection matrix from the Slepian basis to the spherical harmonics
-%       Size: [(L+1)^2 x numFuns], where numFuns is the number of Slepian 
+%       Size: [(L+1)^2 x numFuns], where numFuns is the number of Slepian
 %       functions returned (after truncation, if applicable)
 %   V - Concentration eigenvalues in descending order
 %       The first row contains the eigenvalues of the polar cap Slepian
@@ -102,10 +102,23 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
         N (1, 1) {mustBePositive}
     end
 
-    assert(isnumeric(truncation) || ...
-        ((isstring(truncation) || ischar(truncation)) && strcmpi(truncation, "N")), ...
-        "Truncation must be either a numeric value or the string 'N', but got class %s.", ...
-        upper(class(truncation)));
+    if isnumeric(truncation)
+
+        if ~isnan(truncation) && (truncation <= 0)
+            error("Truncation must be positive, but got %s.", num2str(truncation));
+        end
+
+    elseif (isstring(truncation) || ischar(truncation))
+
+        if ~strcmpi(truncation, "N")
+            error("Truncation must be either a positive integer or the string 'N', but got '%s'.", truncation);
+        end
+
+    else
+        error("Truncation must be either a positive integer or the string 'N', but got class %s.", ...
+            upper(class(truncation)));
+    end
+
     pcapConcThreshold = options.pcapConcThreshold;
     resFactor = options.resFactor;
 
