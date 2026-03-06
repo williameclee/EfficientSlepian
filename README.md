@@ -27,6 +27,6 @@ The main entry function is `glmalpha_eff.m`, as in the following example:
 
 ---
 
-Whilst this repository does not contain the oirignal, unpublished code by Alice Bates, some design choices are still inspired by the original implementation.
+Whilst this repository does not contain the original, unpublished code by Alice Bates, some design choices are still inspired by the original implementation.
 
 Author: 2026/03/05, [En-Chi Lee](https://github.com/williameclee) ([williameclee@arizona.edu](mailto:williameclee@arizona.edu))
