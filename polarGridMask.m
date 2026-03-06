@@ -32,7 +32,7 @@
 %
 % Last modified
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
-%     - Surpressed warnings from POLYSHAPE
+%     - Suppressed warnings from POLYSHAPE
 %     - Reordered input arguments
 
 function [lon, lat, res, weight, mask] = ...
