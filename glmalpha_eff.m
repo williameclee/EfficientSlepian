@@ -68,7 +68,7 @@ function [G, V, N] = glmalpha_eff(domain, L, options)
         domain
         L (1, 1) {mustBeInteger, mustBePositive} = 18
         options.pcapConcThreshold (1, 1) ...
-            {mustBeBetween(options.pcapConcThreshold, 0, 1)} = 0.3
+            {mustBeInRange(options.pcapConcThreshold, 0, 1, "exclude-lower")} = 0.3
         options.resFactor (1, 1) {mustBePositive} = 8
     end
 
