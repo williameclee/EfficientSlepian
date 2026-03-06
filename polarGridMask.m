@@ -32,6 +32,7 @@
 %
 % Last modified
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
+%     - Suppressed warnings from POLYSHAPE
 %     - Reordered input arguments
 
 function [lon, lat, res, weight, mask] = ...
@@ -64,6 +65,8 @@ function [lon, lat, res, weight, mask] = ...
 
     weight = cosd(latt) * deg2rad(res) ^ 2;
     % Note: INPOLYGON appears to misclassify points in complex shapes
+    warnState = warning("off", "MATLAB:polyshape:repairedBySimplify");
+    warnCleanup = onCleanup(@() warning(warnState)); %#ok<NASGU> Ensure warning state is restored
     mask = isinterior(polyshape(pLonlat(:, 1), pLonlat(:, 2)), lonn(:), latt(:));
     mask = reshape(mask, size(lonn));
 end
