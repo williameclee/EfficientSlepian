@@ -61,14 +61,15 @@
 %
 % Output arguments
 %   G - Projection matrix from the Slepian basis to the spherical harmonics
-%       Size: [(L+1)^2 x truncation]
+%       Size: [(L+1)^2 x numFuns], where numFuns is the number of Slepian 
+%       functions returned (after truncation, if applicable)
 %   V - Concentration eigenvalues in descending order
 %       The first row contains the eigenvalues of the polar cap Slepian
 %       functions, and the second row contains the eigenvalues of the
 %       Slepian functions for the rotated domain relative to the polar cap
 %       Slepian basis. That is, they are not comparable to the eigenvalues
 %       from GLMALPHA.
-%       Size: [2 x truncation]
+%       Size: [2 x numFuns]
 %   N - Shannon number
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
@@ -97,7 +98,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Output)
         G (:, :) {mustBeReal}
-        V (2, :) cell
+        V (2, :) {mustBeReal}
         N (1, 1) {mustBePositive}
     end
 
@@ -211,7 +212,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
         G = pG;
     end
 
-    V = [pcapConcs(:), pSlepConcs(:)]; % Concentrations (eigenvalues)
+    V = [pcapConcs(:), pSlepConcs(:)].'; % Concentrations (eigenvalues)
     N = (L + 1) ^ 2 * spharea(pLonlatd);
 
     % Truncate the basis if asked
