@@ -1,13 +1,34 @@
 %% ENCLOSINGCAP - Finds the centre and radius of the smallest enclosing spherical cap
 % Syntax
-%   [lonlat, radius] = enclosingCap(domain)
+%   [pacpLonlat, radius] = enclosingCap(domain)
+%   [pacpLonlat, radius] = enclosingCap(domain, "Name", value)
+%
+% Input arguments
+%   domain - Domain to be enclosed by the cap
+%     - A string or char: name of a function returning boundary coordinates
+%       For example, "antarctica" (from slepian_delta) or "npacific" (from
+%       ULMO)
+%     - A cell array: {funcName, args...} passed to feval
+%       Like the above, funcName is the name of a function that returns
+%       boundary coordinates, and args are additional arguments to that
+%       function.
+%     - A numeric Nx2 array: longitude-latitude boundary coordinates
+%       The unit is specified by the InputUnit option.
+%     - A GeoDomain object (from the ULMO package)
+%       See DOMAINTOLONLAT for details.
+%   InputUnit (name-value) - Unit of the input coordinates ("degrees" or
+%       "radians")
+%       This option only matters if the input domain is a numeric array.
+%       The default unit is "degrees".
+%   OutputUnit (name-value) - Unit of the output coordinates ("degrees" or
+%       "radians")
+%       The default unit is "degrees".
 %
 % Output arguments
-%   lonlat - 1x2 vector of the longitude and latitude of the centre of the
-%       enclosing cap, in degrees
-%		The longitude is in the range [0, 360) and the latitude is in the
-% 		range [-90, 90].
-%   radius - scalar value of the radius of the enclosing cap, in degrees
+%   pacpLonlat - Longitude and latitude of the centre of the enclosing cap,
+%       in the output unit.
+%       Size: [1 x 2]
+%   radius - Radius of the enclosing cap, in the output unit.
 %
 % Author
 %	2026/03/04, En-Chi Lee (williameclee@arizona.edu)
@@ -16,8 +37,10 @@ function [pcapLonlat, radius] = enclosingCap(domain, options)
 
     arguments (Input)
         domain
-        options.InputUnit {mustBeMember(options.InputUnit, {'degrees', 'radians'})} = 'degrees'
-        options.OutputUnit {mustBeMember(options.OutputUnit, {'degrees', 'radians'})} = 'degrees'
+        options.InputUnit ...
+            {mustBeMember(options.InputUnit, {'degrees', 'radians'})} = 'degrees'
+        options.OutputUnit ...
+            {mustBeMember(options.OutputUnit, {'degrees', 'radians'})} = 'degrees'
     end
 
     arguments (Output)
@@ -25,7 +48,8 @@ function [pcapLonlat, radius] = enclosingCap(domain, options)
         radius (1, 1) {mustBeNumeric, mustBePositive}
     end
 
-    lonlat = domainToLonlat(domain, "AddAnchors", true, "InputUnit", options.InputUnit, "OutputUnit", "degrees");
+    lonlat = domainToLonlat(domain, "AddAnchors", true, ...
+        "InputUnit", options.InputUnit, "OutputUnit", "degrees");
 
     % Find the longest distance between 2 points on the boundary
     maxDists = zeros(length(lonlat), 1);

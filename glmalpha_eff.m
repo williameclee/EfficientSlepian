@@ -1,5 +1,40 @@
 %% GLMALPHA_EFF - Computes the Slepian basis using the efficient way
 %
+% Syntax
+%   [G, V, N] = glmalpha_eff(domain, L)
+%   [G, V, N] = glmalpha_eff(domain, L, "Name", value)
+%
+% Input arguments
+%   domain - Domain to convert
+%     - A string or char: name of a function returning boundary coordinates
+%       For example, "antarctica" (from slepian_delta) or "npacific" (from
+%       ULMO)
+%     - A cell array: {funcName, args...} passed to feval
+%       Like the above, funcName is the name of a function that returns
+%       boundary coordinates, and args are additional arguments to that
+%       function.
+%     - A numeric Nx2 array: longitude-latitude boundary coordinates
+%       The unit is specified by the InputUnit option.
+%     - A GeoDomain object (from the ULMO package)
+%       See DOMAINTOLONLAT for details.
+%   L (optional) - Bandwidth (maximum angular degree)
+%       The default degree is 18.
+%   pcapConcThreshold (name-value) - Minimum energy concentration value for
+%       a polar-cap Slepian function to not be discarded.
+%       The default value is 0.3.
+%
+% Output arguments
+%   G - Projection matrix from the Slepian basis to the spherical harmonics
+%       Size: [(L+1)^2 x numFuns]
+%   V - Concentration eigenvalues in descending order
+%       Size: [numFuns x 1]
+%   N - Shannon number
+%       Estimated number of well-concentrated functions, proportional to the
+%       area of the domain and the squared bandwidth.
+%
+% See also
+%   GLMALPHA, GRUNBAUM
+%
 % Author
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
 
@@ -26,9 +61,9 @@ function [G, V, N] = glmalpha_eff(domain, L, options)
     % Step 3: compute the Slepian functions for the polar cap
     pcapConcThreshold = min(options.pcapConcThreshold, 1); % Threshold for well-concentrated Slepian functions
 
-    % Prepatation for Step 3c: Make the colatitude and longitude grid for evaluating the Slepian functions spatially
+    % Preparation for Step 3c: Make the colatitude and longitude grid for evaluating the Slepian functions spatially
     [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
-        polarGridMask(radiusd, L, pLonlatd, resFactor = 16);
+        polarGridMask(radiusd, pLonlatd, L, resFactor = 16);
 
     pcapConcs = []; % The eigenvalues
     pcapGs = {}; % The Slepian coefficients
