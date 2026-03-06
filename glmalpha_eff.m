@@ -98,7 +98,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Output)
         G (:, :) {mustBeReal}
-        V (2, :) {mustBeReal}
+        V (2, :) {mustBeReal, mustBeInRange(V, 0, 1)}
         N (1, 1) {mustBePositive}
     end
 
@@ -111,11 +111,11 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     elseif (isstring(truncation) || ischar(truncation))
 
         if ~strcmpi(truncation, "N")
-            error("Truncation must be either a positive integer or the string 'N', but got '%s'.", truncation);
+            error("Truncation must be either a positive value or the string 'N', but got '%s'.", truncation);
         end
 
     else
-        error("Truncation must be either a positive integer or the string 'N', but got class %s.", ...
+        error("Truncation must be either a positive value or the string 'N', but got class %s.", ...
             upper(class(truncation)));
     end
 
@@ -234,6 +234,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     end
 
     if ~isnan(truncation)
+        truncation = round(truncation); % In case it's a non-integer numeric value
 
         if truncation <= numFuns
             G = G(:, 1:truncation);
