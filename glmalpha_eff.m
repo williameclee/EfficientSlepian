@@ -41,7 +41,7 @@
 %   resFactor (name-value) - Resolution factor for the polar grid used to
 %       compute the second localisation matrix (of the polar cap Slepian
 %       basis)
-%       The itegral for the localisation matrix will be evaluated over a
+%       The integral for the localisation matrix will be evaluated over a
 %       polar grid with roughly L^2 * resFactor points. A higher resolution
 %       factor should give a more accurate localisation matrix, but will
 %       take more time to compute.
@@ -67,7 +67,8 @@ function [G, V, N] = glmalpha_eff(domain, L, options)
     arguments (Input)
         domain
         L (1, 1) {mustBeInteger, mustBePositive} = 18
-        options.pcapConcThreshold (1, 1) {mustBePositive} = 0.3
+        options.pcapConcThreshold (1, 1) ...
+            {mustBeBetween(options.pcapConcThreshold, 0, 1)} = 0.3
         options.resFactor (1, 1) {mustBePositive} = 8
     end
 
@@ -77,7 +78,7 @@ function [G, V, N] = glmalpha_eff(domain, L, options)
         N (1, 1) {mustBePositive}
     end
 
-    pcapConcThreshold = max(min(options.pcapConcThreshold, 1), 0);
+    pcapConcThreshold = options.pcapConcThreshold;
     resFactor = options.resFactor;
 
     %% Main computation
