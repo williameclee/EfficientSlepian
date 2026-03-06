@@ -18,7 +18,7 @@
 %
 % Syntax
 %   [G, V, N] = glmalpha_eff(domain, L)
-%   [G, V, N] = glmalpha_eff(domain, L, rotb, truncation)
+%   [G, V, N] = glmalpha_eff(domain, L, truncation, rotb)
 %   [G, V, N] = glmalpha_eff(__, "Name", value)
 %
 % Input arguments
@@ -61,14 +61,14 @@
 %
 % Output arguments
 %   G - Projection matrix from the Slepian basis to the spherical harmonics
-%       Size: [(L+1)^2 x numFuns]
+%       Size: [(L+1)^2 x truncation]
 %   V - Cell array of concentration eigenvalues in descending order
 %       The first element contains the eigenvalues of the polar cap Slepian
-%       functions, and the second column contains the eigenvalues of the
+%       functions, and the second element contains the eigenvalues of the
 %       Slepian functions for the rotated domain relative to the polar cap
 %       Slepian basis. That is, they are not comparable to the eigenvalues
 %       from GLMALPHA.
-%       Size: [numFuns x 2]
+%       Size: {[numFuns x 1], [truncation x 1]}
 %   N - Shannon number
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
@@ -96,11 +96,12 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Output)
         G (:, :) {mustBeReal}
-        V (2, 1) cell
+        V (1, 2) cell
         N (1, 1) {mustBePositive}
     end
 
-    assert(isnumeric(truncation) || (isstring(truncation) || ischar(truncation)), ...
+    assert(isnumeric(truncation) || ...
+        ((isstring(truncation) || ischar(truncation)) && strcmpi(truncation, "N")), ...
         "Truncation must be either a numeric value or the string 'N', but got class %s.", ...
         upper(class(truncation)));
     pcapConcThreshold = options.pcapConcThreshold;
@@ -205,6 +206,8 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     % Rotate the Slepian functions back to the original domain
     if rotb
         G = rotateG(L, pG, pcapLonlatd);
+    else
+        G = pG;
     end
 
     V = {pcapConcs(:), pSlepConcs(:)}; % Concentrations (eigenvalues)
