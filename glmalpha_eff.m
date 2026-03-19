@@ -81,6 +81,8 @@
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
 % Last modified
 %	2026/03/06, En-Chi Lee (williameclee@arizona.edu)
+%     - Added better guards and log messages for truncation and domain
+%       containment
 %     - Changed eigenvalues (V) output format
 %     - Added truncation and rotb arguments
 
@@ -98,7 +100,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Output)
         G (:, :) {mustBeReal}
-        V (2, :) {mustBeReal, mustBeInRange(V, 0, 1)}
+        V (2, :) {mustBeNonnegative}
         N (1, 1) {mustBePositive}
     end
 
@@ -111,7 +113,8 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     elseif (isstring(truncation) || ischar(truncation))
 
         if ~strcmpi(truncation, "N")
-            error("Truncation must be either a positive value or the string 'N', but got '%s'.", truncation);
+            error("Truncation must be either a positive value or the string 'N', but got '%s'.", ...
+                truncation);
         end
 
     else
@@ -124,10 +127,12 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     %% Main computation
     % Step 1: Find the enclosing polar cap
-    [pcapLonlatd, radiusd] = enclosingCap(domain, "OutputUnit", "degrees");
+    [pcapLonlatd, ~] = enclosingCap(domain, "OutputUnit", "degrees");
 
     % Step 2: Rotate the domain to the North Pole
     pLonlatd = rotateToNPole(domain, pcapLonlatd, "OutputUnit", "degrees");
+    % Make sure the domain is actually enclosed
+    radiusd = 90 - min(pLonlatd(:, 2));
 
     % Step 3: compute the Slepian functions for the polar cap
     % Preparation for Step 3c: Make the colatitude and longitude grid for
@@ -225,8 +230,14 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
         G = pG;
     end
 
-    V = [pcapConcs(:), pSlepConcs(:)].'; % Concentrations (eigenvalues)
     N = (L + 1) ^ 2 * spharea(pLonlatd);
+    V = [pcapConcs(:), pSlepConcs(:)].'; % Concentrations (eigenvalues)
+
+    if any(V > 1, "all")
+        warning("slepian:efficientSlepian:invalidEigenvalues", ...
+            '%d eigenvalues are greater than 1 (max: %.3f), which should not happen.', ...
+            sum(V > 1, "all"), max(V, [], "all"));
+    end
 
     % Truncate the basis if asked
     if (isstring(truncation) || ischar(truncation)) && strcmpi(truncation, "N")
@@ -241,7 +252,9 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
             V = V(:, 1:truncation);
         else
             warning( ...
-                "Truncation level (%d) is larger than the number of computed functions (%d). No truncation applied.", truncation, numFuns);
+                ['Truncation level (%d) is larger than the number of computed functions (%d). ', ...
+             'No truncation applied.'], ...
+                truncation, numFuns);
         end
 
     end
