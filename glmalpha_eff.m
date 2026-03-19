@@ -81,7 +81,7 @@
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
 % Last modified
 %	2026/03/06, En-Chi Lee (williameclee@arizona.edu)
-%     - Added better gaurds and log messages for truncation and domain
+%     - Added better guards and log messages for truncation and domain
 %       containment
 %     - Changed eigenvalues (V) output format
 %     - Added truncation and rotb arguments
@@ -100,7 +100,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Output)
         G (:, :) {mustBeReal}
-        V (2, :) {mustBePositive}
+        V (2, :) {mustBeNonnegative}
         N (1, 1) {mustBePositive}
     end
 
@@ -252,8 +252,8 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
             V = V(:, 1:truncation);
         else
             warning( ...
-                ["Truncation level (%d) is larger than the number of computed functions (%d). ", ...
-             "No truncation applied."], ...
+                ['Truncation level (%d) is larger than the number of computed functions (%d). ', ...
+             'No truncation applied.'], ...
                 truncation, numFuns);
         end
 
