@@ -17,9 +17,9 @@
 % formulation (GLMALPHA) for large bandwidths and small domains.
 %
 % Syntax
-%   [G, V, N] = glmalpha_eff(domain, L)
-%   [G, V, N] = glmalpha_eff(domain, L, truncation, rotb)
-%   [G, V, N] = glmalpha_eff(__, "Name", value)
+%   [G, V, N, K] = glmalpha_eff(domain, L)
+%   [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb)
+%   [G, V, N, K] = glmalpha_eff(__, "Name", value)
 %
 % Input arguments
 %   domain - Domain to convert
@@ -50,13 +50,23 @@
 %   pcapConcThreshold (name-value) - Minimum energy concentration value for
 %       a polar-cap Slepian function to not be discarded.
 %       The default value is 0.3.
-%   resFactor (name-value) - Resolution factor for the polar grid used to
-%       compute the second localisation matrix (of the polar cap Slepian
-%       basis)
+%   IntegrationMethod (name-value) - Method to compute the localisation
+%       matrix for the polar cap Slepian basis over the rotated domain.
+%         - "gl": Use Gauss-Legendre quadrature for the integration (same
+%           as in most implementations in the SLEPIAN packages)
+%         - "grid": Use a spatial grid to evaluate the Slepian functions
+%           and compute the integrals as sums (as described in Bates et al.
+%           2017)
+%       The Gauss-Legendre method should consume significantly less memory.
+%       The default method is "gl".
+%   GlNodes (name-value) - Number of Gauss-Legendre quadrature nodes for
+%       latitude integration, if the "gl" method is chosen
+%       The default number of nodes is 101.
+%   GridResFactor (name-value) - Resolution factor for the polar grid used
+%       to compute the second localisation matrix (of the polar cap Slepian
+%       basis), if the "grid" method is chosen
 %       The integral for the localisation matrix will be evaluated over a
-%       polar grid with roughly L^2 * resFactor points. A higher resolution
-%       factor should give a more accurate localisation matrix, but will
-%       take more time to compute.
+%       polar grid with roughly L^2 * GridResFactor points.
 %       The default value is 8.
 %
 % Output arguments
@@ -73,20 +83,32 @@
 %   N - Shannon number
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
+%   K - Localisation matrix for the polar cap Slepian basis over the
+%       rotated domain
+%       This is always computed for the full polar-cap Slepian basis,
+%       independent of any truncation applied to G or V.
+%       Size: [numPCFuns x numPCFuns], where numPCFuns is the number of
+%       polar-cap Slepian functions before truncation.
 %
 % See also
-%   GLMALPHA, GRUNBAUM
+%   GLMALPHA, GRUNBAUM, KERNELCP
 %
 % Author
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
+%
 % Last modified
+%	2026/03/20, En-Chi Lee (williameclee@arizona.edu)
+%     - Made the localisation matrix an output argument
+%     - Added the SLEPIAN_ALPHA way of integrating the localisation matrix
+%       and made it the default method
+%     - Modularised the localisation matrix computation
 %	2026/03/06, En-Chi Lee (williameclee@arizona.edu)
 %     - Added better guards and log messages for truncation and domain
 %       containment
 %     - Changed eigenvalues (V) output format
 %     - Added truncation and rotb arguments
 
-function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
+function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Input)
         domain
@@ -95,13 +117,17 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
         rotb (1, 1) {mustBeNumericOrLogical} = true
         options.pcapConcThreshold (1, 1) ...
             {mustBeInRange(options.pcapConcThreshold, 0, 1, "exclude-lower")} = 0.3
-        options.resFactor (1, 1) {mustBePositive} = 8
+        options.IntegrationMethod ...
+            {mustBeTextScalar, mustBeMember(options.IntegrationMethod, ["grid", "gl"])} = "gl"
+        options.GlNodes (1, 1) {mustBePositive, mustBeInteger} = 101
+        options.GridResFactor (1, 1) {mustBePositive} = 8
     end
 
     arguments (Output)
-        G (:, :) {mustBeReal}
+        G (:, :) {mustBeReal, mustBeFinite}
         V (2, :) {mustBeNonnegative}
         N (1, 1) {mustBePositive}
+        K (:, :) {mustBeReal, mustBeFinite}
     end
 
     if isnumeric(truncation)
@@ -123,7 +149,6 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     end
 
     pcapConcThreshold = options.pcapConcThreshold;
-    resFactor = options.resFactor;
 
     %% Main computation
     % Step 1: Find the enclosing polar cap
@@ -135,16 +160,9 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     radiusd = 90 - min(pLonlatd(:, 2));
 
     % Step 3: compute the Slepian functions for the polar cap
-    % Preparation for Step 3c: Make the colatitude and longitude grid for
-    % evaluating the Slepian functions spatially
-    [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
-        polarGridMask(radiusd, pLonlatd, L, resFactor = resFactor);
-    pgridWeight = pgridWeight .* pgridMask; % Mask the weights
-
     pcapConcs = []; % The eigenvalues
     pcapGs = {}; % The Slepian coefficients
     pcapMs = []; % The order each function corresponds to
-    pcapSlepMesh = []; % The Slepian functions evaluated on the grid
 
     for m = -L:L
         % Step 3a: Find the SH coefficients of polar cap Slepian functions
@@ -167,24 +185,11 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
             pcapGs = [pcapGs; {pcapG_m(:, i)}];
         end
 
-        % Step 3c: Evaluate the Slepian functions spatially and store in slep
-        Ylm_m = zeros(length(pgridLatd), length(pgridLond), L - abs(m) + 1);
-
-        for l = abs(m):L
-            Ylm_m(:, :, l - abs(m) + 1) = ...
-                ylm(l, m, deg2rad(90 - pgridLatd), deg2rad(pgridLond));
-        end
-
-        for i = 1:numConc
-            pcapSlepMesh_i = sum(Ylm_m .* reshape(pcapG_m(:, i), 1, 1, []), 3);
-            pcapSlepMesh = cat(3, pcapSlepMesh, pcapSlepMesh_i);
-        end
-
+        % Step 3c: Evaluate the Slepian functions spatially is absorbed into step 4
     end
 
     % Sort the Slepian functions by concentration
     [pcapConcs, pcapConcSortId] = sort(pcapConcs, "descend");
-    pcapSlepMesh = pcapSlepMesh(:, :, pcapConcSortId);
     pcapGs = pcapGs(pcapConcSortId);
     pcapMs = pcapMs(pcapConcSortId);
     numFuns = length(pcapConcs);
@@ -200,22 +205,20 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     % Step 4: Compute localisation matrix for the polar cap Slepian basis
     % over the rotated domain
-    locMat = nan(numFuns, numFuns);
-
-    for i = 1:numFuns
-        locMat(i, i) = sum(pcapSlepMesh(:, :, i) .^ 2 .* pgridWeight, "all");
-
-        for j = i + 1:numFuns
-            locMat(i, j) = sum( ...
-                pcapSlepMesh(:, :, i) .* pcapSlepMesh(:, :, j) .* pgridWeight, "all");
-            locMat(j, i) = locMat(i, j);
-        end
-
+    switch options.IntegrationMethod
+        case "gl"
+            K = localisationMatrix(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GlNodes);
+        case "grid"
+            K = localisationMatrix_grid(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GridResFactor);
+        otherwise
+            error("slepian:efficientSlepian:invalidIntegrationMethod", ...
+                'Integration method must be either "gl" or "grid", but got invalid option "%s".', ...
+                options.IntegrationMethod);
     end
 
     % Step 5: Eigen-decomposition of localisation matrix
     % Get the Slepian functions for the polar cap Slepian functions
-    [pSlepG, pSlepConcs] = eig(locMat);
+    [pSlepG, pSlepConcs] = eig(K);
     [pSlepConcs, pConcSortId] = sort(diag(pSlepConcs), "descend");
     pSlepG = pSlepG(:, pConcSortId);
 
@@ -305,6 +308,135 @@ function G = rotateG(L, pG, pcapLonlatd)
         cosinozero = cosi(mzo);
         % Reorder into standard lmcosi format
         G(:, j) = cosinozero(rinm);
+    end
+
+end
+
+function locMat = ...
+        localisationMatrix(L, pcapGs, pcapMs, radiusd, pLonlatd, nGL)
+    % Computes the localisation matrix for the polar cap Slepian basis over
+    % the rotated domain, using the same method as in KERNELCP
+
+    arguments (Output)
+        locMat (:, :) {mustBeReal, mustBeFinite}
+    end
+
+    % Gauss-Legendre quadrature interval and nodes over the colatitude range of the polar cap
+    [glWeights, glNodes, ~] = gausslegendrecof(nGL, [], ...
+        [cosd(radiusd), cosd(0)]);
+
+    % Evaluate the colatitude profiles
+    uniqueMs = unique(pcapMs);
+    numFuns = length(pcapMs);
+    % The Slepian colatitude evaluations at GL nodes [nodes x funs]
+    pcapSlepColats = nan(length(glNodes), numFuns);
+
+    for im = 1:length(uniqueMs)
+        m = uniqueMs(im);
+        idx = (pcapMs == m);
+        pcapG_m = pcapGs(idx);
+
+        [Xlm, ~, ~] = xlm(abs(m):L, abs(m), acos(glNodes), 0);
+
+        % Format into [ells x nodes]
+        Xlm = reshape(Xlm, [], length(glNodes));
+
+        % Colatitude profile for each retained function, [nodes x funs]
+        % Since the zonal component of SHs making up a Slepian function is
+        % just the same sine or cosine, we can sum the longitudinal part of
+        % the Ylm (i.e. Xlm) and then later multiply by the zonal part
+        pcapSlepColat_m = Xlm' * cell2mat(pcapG_m(:)');
+
+        % Append to our collection
+        pcapSlepColats(:, idx) = pcapSlepColat_m;
+    end
+
+    % Longitudinal integration intervals for the domain at the GL nodes
+    zonalIntervals = deg2rad(dphregion(acosd(glNodes), [], pLonlatd));
+
+    locMat = nan(numFuns, numFuns);
+
+    for i = 1:numFuns
+
+        for j = i:numFuns
+            m1 = pcapMs(i);
+            m2 = pcapMs(j);
+
+            if m1 > 0 && m2 > 0
+                zonalIntg = sinsin(acos(glNodes), m1, m2, zonalIntervals);
+            elseif m1 <= 0 && m2 <= 0
+                zonalIntg = coscos(acos(glNodes), m1, m2, zonalIntervals);
+            elseif m1 > 0 && m2 <= 0
+                zonalIntg = sincos(acos(glNodes), m1, m2, zonalIntervals);
+            else
+                zonalIntg = sincos(acos(glNodes), m2, m1, zonalIntervals);
+            end
+
+            % Apply normalisation factor for non-zonal orders
+            % Ylm = Xlm * sqrt(2 - (m==0)) * trig(m * phi)
+            normFactor = sqrt(2 - (m1 == 0)) * sqrt(2 - (m2 == 0));
+            zonalIntg = zonalIntg * normFactor;
+
+            locMat(i, j) = sum(glWeights(:)' .* ...
+                pcapSlepColats(:, i)' .* pcapSlepColats(:, j)' .* zonalIntg(:)');
+            locMat(j, i) = locMat(i, j); % symmetric
+        end
+
+    end
+
+end
+
+function locMat = ...
+        localisationMatrix_grid(L, pcapGs, pcapMs, radiusd, pLonlatd, res)
+    % Computes the localisation matrix for the polar cap Slepian basis over
+    % the rotated domain, using the spatial grid method
+
+    % The spatial grid to evaluate the Slepian functions over
+    [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
+        polarGridMask(radiusd, pLonlatd, L, resFactor = res);
+    pgridWeight = pgridWeight .* pgridMask; % Mask the weights
+
+    % Evaluate the Slepian functions for the polar cap basis over the grid
+    uniqueMs = unique(pcapMs);
+    numFuns = length(pcapMs);
+
+    pcapSlep = nan(length(pgridLatd), length(pgridLond), numFuns);
+
+    for im = 1:length(uniqueMs)
+        m = uniqueMs(im);
+        idx = (pcapMs == m);
+        pcapG_m = pcapGs(idx);
+
+        Ylm_m = zeros(length(pgridLatd), length(pgridLond), L - abs(m) + 1);
+
+        for l = abs(m):L
+            Ylm_m(:, :, l - abs(m) + 1) = ...
+                ylm(l, m, deg2rad(90 - pgridLatd), deg2rad(pgridLond));
+        end
+
+        id = find(idx);
+
+        for i = 1:length(id)
+            f = id(i);
+            pcapSlep_i = sum(Ylm_m .* ...
+                reshape(pcapG_m{i}, 1, 1, []), 3);
+            pcapSlep(:, :, f) = pcapSlep_i;
+        end
+
+    end
+
+    % Computes the inner products of the Slepian functions
+    locMat = nan(numFuns, numFuns);
+
+    for i = 1:numFuns
+        locMat(i, i) = sum(pcapSlep(:, :, i) .^ 2 .* pgridWeight, "all");
+
+        for j = i + 1:numFuns
+            locMat(i, j) = sum( ...
+                pcapSlep(:, :, i) .* pcapSlep(:, :, j) .* pgridWeight, "all");
+            locMat(j, i) = locMat(i, j);
+        end
+
     end
 
 end
