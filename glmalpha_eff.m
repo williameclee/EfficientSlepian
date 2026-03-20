@@ -79,7 +79,10 @@
 %
 % Author
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
+%
 % Last modified
+%	2026/03/20, En-Chi Lee (williameclee@arizona.edu)
+%     - Modularised the localisation matrix computation
 %	2026/03/06, En-Chi Lee (williameclee@arizona.edu)
 %     - Added better guards and log messages for truncation and domain
 %       containment
@@ -137,14 +140,14 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     % Step 3: compute the Slepian functions for the polar cap
     % Preparation for Step 3c: Make the colatitude and longitude grid for
     % evaluating the Slepian functions spatially
-    [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
-        polarGridMask(radiusd, pLonlatd, L, resFactor = resFactor);
-    pgridWeight = pgridWeight .* pgridMask; % Mask the weights
+    % [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
+    %     polarGridMask(radiusd, pLonlatd, L, resFactor = resFactor);
+    % pgridWeight = pgridWeight .* pgridMask; % Mask the weights
 
     pcapConcs = []; % The eigenvalues
     pcapGs = {}; % The Slepian coefficients
     pcapMs = []; % The order each function corresponds to
-    pcapSlepMesh = []; % The Slepian functions evaluated on the grid
+    % pcapSlepMesh = []; % The Slepian functions evaluated on the grid
 
     for m = -L:L
         % Step 3a: Find the SH coefficients of polar cap Slepian functions
@@ -167,24 +170,11 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
             pcapGs = [pcapGs; {pcapG_m(:, i)}];
         end
 
-        % Step 3c: Evaluate the Slepian functions spatially and store in slep
-        Ylm_m = zeros(length(pgridLatd), length(pgridLond), L - abs(m) + 1);
-
-        for l = abs(m):L
-            Ylm_m(:, :, l - abs(m) + 1) = ...
-                ylm(l, m, deg2rad(90 - pgridLatd), deg2rad(pgridLond));
-        end
-
-        for i = 1:numConc
-            pcapSlepMesh_i = sum(Ylm_m .* reshape(pcapG_m(:, i), 1, 1, []), 3);
-            pcapSlepMesh = cat(3, pcapSlepMesh, pcapSlepMesh_i);
-        end
-
+        % Step 3c: Evaluate the Slepian functions spatially is absorbed into step 4
     end
 
     % Sort the Slepian functions by concentration
     [pcapConcs, pcapConcSortId] = sort(pcapConcs, "descend");
-    pcapSlepMesh = pcapSlepMesh(:, :, pcapConcSortId);
     pcapGs = pcapGs(pcapConcSortId);
     pcapMs = pcapMs(pcapConcSortId);
     numFuns = length(pcapConcs);
@@ -200,18 +190,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     % Step 4: Compute localisation matrix for the polar cap Slepian basis
     % over the rotated domain
-    locMat = nan(numFuns, numFuns);
-
-    for i = 1:numFuns
-        locMat(i, i) = sum(pcapSlepMesh(:, :, i) .^ 2 .* pgridWeight, "all");
-
-        for j = i + 1:numFuns
-            locMat(i, j) = sum( ...
-                pcapSlepMesh(:, :, i) .* pcapSlepMesh(:, :, j) .* pgridWeight, "all");
-            locMat(j, i) = locMat(i, j);
-        end
-
-    end
+    locMat = localisationMatrix_grid(L, pcapGs, pcapMs, radiusd, pLonlatd, resFactor);
 
     % Step 5: Eigen-decomposition of localisation matrix
     % Get the Slepian functions for the polar cap Slepian functions
@@ -305,6 +284,61 @@ function G = rotateG(L, pG, pcapLonlatd)
         cosinozero = cosi(mzo);
         % Reorder into standard lmcosi format
         G(:, j) = cosinozero(rinm);
+    end
+
+end
+
+function locMat = ...
+        localisationMatrix_grid(L, pcapGs, pcapMs, radiusd, pLonlatd, res)
+    % Computes the localisation matrix for the polar cap Slepian basis over
+    % the rotated domain, using the spatial grid method
+
+    % The spatial grid to evaluate the Slepian functions over
+    [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
+        polarGridMask(radiusd, pLonlatd, L, resFactor = res);
+    pgridWeight = pgridWeight .* pgridMask; % Mask the weights
+
+    % Evaluate the Slepian functions for the polar cap basis over the grid
+    uniqueMs = unique(pcapMs);
+    numFuns = length(pcapMs);
+
+    pcapSlep = nan(length(pgridLatd), length(pgridLond), numFuns);
+
+    for im = 1:length(uniqueMs)
+        m = uniqueMs(im);
+        idx = (pcapMs == m);
+        pcapG_m = pcapGs(idx);
+
+        Ylm_m = zeros(length(pgridLatd), length(pgridLond), L - abs(m) + 1);
+
+        for l = abs(m):L
+            Ylm_m(:, :, l - abs(m) + 1) = ...
+                ylm(l, m, deg2rad(90 - pgridLatd), deg2rad(pgridLond));
+        end
+
+        id = find(idx);
+
+        for i = 1:length(id)
+            f = id(i);
+            pcapSlep_i = sum(Ylm_m .* ...
+                reshape(pcapG_m{i}, 1, 1, []), 3);
+            pcapSlep(:, :, f) = pcapSlep_i;
+        end
+
+    end
+
+    % Computes the inner products of the Slepian functions
+    locMat = nan(numFuns, numFuns);
+
+    for i = 1:numFuns
+        locMat(i, i) = sum(pcapSlep(:, :, i) .^ 2 .* pgridWeight, "all");
+
+        for j = i + 1:numFuns
+            locMat(i, j) = sum( ...
+                pcapSlep(:, :, i) .* pcapSlep(:, :, j) .* pgridWeight, "all");
+            locMat(j, i) = locMat(i, j);
+        end
+
     end
 
 end
