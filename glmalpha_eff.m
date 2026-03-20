@@ -17,9 +17,9 @@
 % formulation (GLMALPHA) for large bandwidths and small domains.
 %
 % Syntax
-%   [G, V, N] = glmalpha_eff(domain, L)
-%   [G, V, N] = glmalpha_eff(domain, L, truncation, rotb)
-%   [G, V, N] = glmalpha_eff(__, "Name", value)
+%   [G, V, N, K] = glmalpha_eff(domain, L)
+%   [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb)
+%   [G, V, N, K] = glmalpha_eff(__, "Name", value)
 %
 % Input arguments
 %   domain - Domain to convert
@@ -85,6 +85,9 @@
 %   N - Shannon number
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
+%   K - Localisation matrix for the polar cap Slepian basis over the
+%       rotated domain
+%       Size: [numFuns x numFuns]
 %
 % See also
 %   GLMALPHA, GRUNBAUM, KERNELCP
@@ -94,6 +97,7 @@
 %
 % Last modified
 %	2026/03/20, En-Chi Lee (williameclee@arizona.edu)
+%     - Made the localisation matrix an output argument
 %     - Added the SLEPIAN_ALPHA way of integrating the localisation matrix
 %       and made it the default method
 %     - Modularised the localisation matrix computation
@@ -103,7 +107,7 @@
 %     - Changed eigenvalues (V) output format
 %     - Added truncation and rotb arguments
 
-function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
+function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Input)
         domain
@@ -112,16 +116,17 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
         rotb (1, 1) {mustBeNumericOrLogical} = true
         options.pcapConcThreshold (1, 1) ...
             {mustBeInRange(options.pcapConcThreshold, 0, 1, "exclude-lower")} = 0.3
-        options.IntegrationMethod (1, 1) ...
+        options.IntegrationMethod ...
             {mustBeTextScalar, mustBeMember(options.IntegrationMethod, ["grid", "gl"])} = "gl"
         options.GlNodes (1, 1) {mustBePositive, mustBeInteger} = 101
         options.GridResFactor (1, 1) {mustBePositive} = 8
     end
 
     arguments (Output)
-        G (:, :) {mustBeReal}
+        G (:, :) {mustBeReal, mustBeFinite}
         V (2, :) {mustBeNonnegative}
         N (1, 1) {mustBePositive}
+        K (:, :) {mustBeReal, mustBeFinite}
     end
 
     if isnumeric(truncation)
@@ -201,9 +206,9 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     % over the rotated domain
     switch options.IntegrationMethod
         case "gl"
-            locMat = localisationMatrix(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GlNodes);
+            K = localisationMatrix(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GlNodes);
         case "grid"
-            locMat = localisationMatrix_grid(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GridResFactor);
+            K = localisationMatrix_grid(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GridResFactor);
         otherwise
             error("slepian:efficientSlepian:invalidIntegrationMethod", ...
                 'Integration method must be either "gl" or "grid", but got invalid option "%s".', ...
@@ -212,7 +217,7 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     % Step 5: Eigen-decomposition of localisation matrix
     % Get the Slepian functions for the polar cap Slepian functions
-    [pSlepG, pSlepConcs] = eig(locMat);
+    [pSlepG, pSlepConcs] = eig(K);
     [pSlepConcs, pConcSortId] = sort(diag(pSlepConcs), "descend");
     pSlepG = pSlepG(:, pConcSortId);
 
