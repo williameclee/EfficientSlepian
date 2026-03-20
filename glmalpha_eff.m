@@ -138,16 +138,9 @@ function [G, V, N] = glmalpha_eff(domain, L, truncation, rotb, options)
     radiusd = 90 - min(pLonlatd(:, 2));
 
     % Step 3: compute the Slepian functions for the polar cap
-    % Preparation for Step 3c: Make the colatitude and longitude grid for
-    % evaluating the Slepian functions spatially
-    % [pgridLond, pgridLatd, ~, pgridWeight, pgridMask] = ...
-    %     polarGridMask(radiusd, pLonlatd, L, resFactor = resFactor);
-    % pgridWeight = pgridWeight .* pgridMask; % Mask the weights
-
     pcapConcs = []; % The eigenvalues
     pcapGs = {}; % The Slepian coefficients
     pcapMs = []; % The order each function corresponds to
-    % pcapSlepMesh = []; % The Slepian functions evaluated on the grid
 
     for m = -L:L
         % Step 3a: Find the SH coefficients of polar cap Slepian functions
