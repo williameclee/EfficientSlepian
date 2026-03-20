@@ -66,7 +66,7 @@
 %       to compute the second localisation matrix (of the polar cap Slepian
 %       basis), if the "grid" method is chosen
 %       The integral for the localisation matrix will be evaluated over a
-%       polar grid with roughly L^2 * resFactor points. A higher resolution
+%       polar grid with roughly L^2 * GridResFactor points. A higher resolution
 %       factor should give a more accurate localisation matrix, but will
 %       take more time to compute.
 %       The default value is 8.
@@ -86,8 +86,10 @@
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
 %   K - Localisation matrix for the polar cap Slepian basis over the
-%       rotated domain
-%       Size: [numFuns x numFuns]
+%       rotated domain. This is always computed for the full polar-cap
+%       Slepian basis, independent of any truncation applied to G or V.
+%       Size: [numPCFuns x numPCFuns], where numPCFuns is the number of
+%       polar-cap Slepian functions before truncation.
 %
 % See also
 %   GLMALPHA, GRUNBAUM, KERNELCP
@@ -324,7 +326,7 @@ function locMat = ...
     [glWeights, glNodes, ~] = gausslegendrecof(nGL, [], ...
         [cosd(radiusd), cosd(0)]);
 
-    % Evaulate the colatitude profiles
+    % Evaluate the colatitude profiles
     uniqueMs = unique(pcapMs);
     numFuns = length(pcapMs);
     % The Slepian colatitude evaluations at GL nodes [nodes x funs]
@@ -350,7 +352,7 @@ function locMat = ...
         pcapSlepColats(:, idx) = pcapSlepColat_m;
     end
 
-    % Longitudinal integration intervals for the domain at the GL notes
+    % Longitudinal integration intervals for the domain at the GL nodes
     zonalIntervals = deg2rad(dphregion(acosd(glNodes), [], pLonlatd));
 
     locMat = nan(numFuns, numFuns);
