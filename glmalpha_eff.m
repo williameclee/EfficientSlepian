@@ -66,9 +66,7 @@
 %       to compute the second localisation matrix (of the polar cap Slepian
 %       basis), if the "grid" method is chosen
 %       The integral for the localisation matrix will be evaluated over a
-%       polar grid with roughly L^2 * GridResFactor points. A higher resolution
-%       factor should give a more accurate localisation matrix, but will
-%       take more time to compute.
+%       polar grid with roughly L^2 * GridResFactor points.
 %       The default value is 8.
 %
 % Output arguments
@@ -86,8 +84,9 @@
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
 %   K - Localisation matrix for the polar cap Slepian basis over the
-%       rotated domain. This is always computed for the full polar-cap
-%       Slepian basis, independent of any truncation applied to G or V.
+%       rotated domain
+%       This is always computed for the full polar-cap Slepian basis,
+%       independent of any truncation applied to G or V.
 %       Size: [numPCFuns x numPCFuns], where numPCFuns is the number of
 %       polar-cap Slepian functions before truncation.
 %
