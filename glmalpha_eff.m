@@ -68,6 +68,12 @@
 %       The integral for the localisation matrix will be evaluated over a
 %       polar grid with roughly L^2 * GridResFactor points.
 %       The default value is 8.
+%   ForceNew (name-value) - Force recomputation and overwrite of save files
+%       The default value is FALSE.
+%   SaveData (name-value) - Save the resulting basis to IFILES path
+%       The default value is TRUE.
+%   BeQuiet (name-value) - Suppress console output messages
+%       The default value is FALSE.
 %
 % Output arguments
 %   G - Projection matrix from the Slepian basis to the spherical harmonics
@@ -98,6 +104,7 @@
 %
 % Last modified
 %	2026/03/20, En-Chi Lee (williameclee@arizona.edu)
+%     - Saved results to disc for reuse
 %     - Made the localisation matrix an output argument
 %     - Added the SLEPIAN_ALPHA way of integrating the localisation matrix
 %       and made it the default method
@@ -121,6 +128,9 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
             {mustBeTextScalar, mustBeMember(options.IntegrationMethod, ["grid", "gl"])} = "gl"
         options.GlNodes (1, 1) {mustBePositive, mustBeInteger} = 101
         options.GridResFactor (1, 1) {mustBePositive} = 8
+        options.ForceNew (1, 1) logical = false
+        options.SaveData (1, 1) logical = true
+        options.BeQuiet (1, 1) logical = false
     end
 
     arguments (Output)
@@ -150,7 +160,57 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     pcapConcThreshold = options.pcapConcThreshold;
 
+    %% Prcoputation check
+    dataPath = getoutputfile(domain, L, pcapConcThreshold, rotb, options);
+
+    vars = {'G', 'V', 'N', 'K'};
+
+    if ~options.ForceNew && exist(dataPath, 'file') && ...
+            all(ismember(vars, who('-file', dataPath)))
+        data = load(dataPath, vars{:});
+        G = data.G;
+        V = data.V;
+        N = data.N;
+        K = data.K;
+
+        if ~options.BeQuiet
+            fprintf('[SLEPIAN>%s] Loaded <a href="matlab: fprintf(''%s\\n'');open(''%s'')">efficient Slepian projection matrix</a>.\n', ...
+                mfilename, dataPath, dataPath);
+        end
+
+        % Truncate the basis if asked
+        if (isstring(truncation) || ischar(truncation)) && strcmpi(truncation, "N")
+            truncation = round(N);
+        end
+
+        if ~isnan(truncation)
+            truncation = round(truncation); % In case it's a non-integer numeric value
+
+            if truncation <= size(G, 2)
+                G = G(:, 1:truncation);
+                V = V(:, 1:truncation);
+            else
+                warning( ...
+                    ['Truncation level (%d) is larger than the number of loaded functions (%d). ', ...
+                 'No truncation applied.'], ...
+                    truncation, size(G, 2));
+            end
+
+        end
+
+        return
+    end
+
     %% Main computation
+    tic;
+
+    if ~options.BeQuiet
+        fprintf( ...
+            ['[SLEPIAN>%s] Computing Slepian basis with the efficient formulation, ', ...
+         'this may take a while...\n'], ...
+            mfilename);
+    end
+
     % Step 1: Find the enclosing polar cap
     [pcapLonlatd, ~] = enclosingCap(domain, "OutputUnit", "degrees");
 
@@ -207,12 +267,15 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
     % over the rotated domain
     switch options.IntegrationMethod
         case "gl"
-            K = localisationMatrix(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GlNodes);
+            K = localisationMatrix(...
+                L, pcapGs, pcapMs, radiusd, pLonlatd, options.GlNodes);
         case "grid"
-            K = localisationMatrix_grid(L, pcapGs, pcapMs, radiusd, pLonlatd, options.GridResFactor);
+            K = localisationMatrix_grid(...
+                L, pcapGs, pcapMs, radiusd, pLonlatd, options.GridResFactor);
         otherwise
             error("slepian:efficientSlepian:invalidIntegrationMethod", ...
-                'Integration method must be either "gl" or "grid", but got invalid option "%s".', ...
+                ['Integration method must be either "gl" or "grid", ', ...
+                'but got invalid option "%s".'], ...
                 options.IntegrationMethod);
     end
 
@@ -233,6 +296,12 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
         G = pG;
     end
 
+    if ~options.BeQuiet
+        t = toc;
+        fprintf('[SLEPIAN>%s] Finished computing Slepian basis in %.2f seconds.\n', ...
+            mfilename, t);
+    end
+
     N = (L + 1) ^ 2 * spharea(pLonlatd);
     V = [pcapConcs(:), pSlepConcs(:)].'; % Concentrations (eigenvalues)
 
@@ -240,6 +309,16 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
         warning("slepian:efficientSlepian:invalidEigenvalues", ...
             '%d eigenvalues are greater than 1 (max: %.3f), which should not happen.', ...
             sum(V > 1, "all"), max(V, [], "all"));
+    end
+
+    if options.SaveData
+        save(dataPath, '-v7.3', 'G', 'V', 'N', 'K');
+
+        if ~options.BeQuiet
+            fprintf('[SLEPIAN>%s] Saved <a href="matlab: fprintf(''%s\\n'');open(''%s'')">efficient Slepian projection matrix</a>.\n', ...
+                mfilename, dataPath, dataPath);
+        end
+
     end
 
     % Truncate the basis if asked
@@ -439,4 +518,41 @@ function locMat = ...
 
     end
 
+end
+
+function dataPath = getoutputfile(domain, L, pcapConcThreshold, rotb, options)
+    % Generates the human-readable string for the saved matrix filename
+    if isa(domain, 'char') || isa(domain, 'string')
+        domainId = char(domain);
+    elseif isa(domain, 'GeoDomain')
+        domainId = char(domain.Id);
+    elseif iscell(domain)
+        domainId = char(domain{1});
+    else
+        domainId = hash(domain, 'sha1');
+    end
+
+    switch options.IntegrationMethod
+        case "gl"
+            intStr = sprintf('gl_%i', options.GlNodes);
+        case "grid"
+            intStr = sprintf('grid_%g', options.GridResFactor);
+    end
+
+    if ~rotb
+        rotbStr = '-norot';
+    else
+        rotbStr = '';
+    end
+
+    outputFile = sprintf('glmalpha_eff-%s-%i-%g-%s%s.mat', ...
+        domainId, L, pcapConcThreshold, intStr, rotbStr);
+
+    dataFolder = fullfile(getenv('IFILES'), 'GLMALPHA_EFF');
+
+    if ~exist(dataFolder, 'dir')
+        mkdir(dataFolder);
+    end
+
+    dataPath = fullfile(dataFolder, outputFile);
 end
