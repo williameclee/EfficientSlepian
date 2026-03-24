@@ -34,7 +34,8 @@
 % Last modified
 %   2026/03/20, En-Chi Lee (williameclee@arizona.edu)
 %     - Ported from the local, modified version of SLEPIAN_ALPHA. No
-%       behavioural, just an additional argument to supress log messages
+%       behavioural changes, just an additional argument to suppress log
+%       messages
 %   2012/07/11, fjsimons@alum.mit.edu
 
 function [ngl1, ngl2, com, Vc, nofa, zmean] = ...
