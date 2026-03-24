@@ -1,7 +1,12 @@
-%% ENCLOSINGCAP - Finds the centre and radius of the smallest enclosing spherical cap
+%% ENCLOSINGCAP - Finds smallest enclosing spherical cap of shape on sphere
+% The algorithm starts from the centroid of the input points and
+% iteratively moves towards the furthest point until convergence. As an
+% extra final step, the radius is calculated to ensure all points are
+% enclosed.
+%
 % Syntax
-%   [pacpLonlat, radius] = enclosingCap(domain)
-%   [pacpLonlat, radius] = enclosingCap(domain, "Name", value)
+%   [clonlat, radius] = enclosingCap(domain)
+%   [clonlat, radius] = enclosingCap(domain, "Name", value)
 %
 % Input arguments
 %   domain - Domain to be enclosed by the cap
@@ -25,18 +30,23 @@
 %       The default unit is "degrees".
 %
 % Output arguments
-%   pacpLonlat - Longitude and latitude of the centre of the enclosing cap,
+%   clonlat - Longitude and latitude of the centre of the enclosing cap,
 %       in the output unit.
 %       Size: [1 x 2]
-%   radius - Radius of the enclosing cap, in the output unit.
+%   radius - Radius of the enclosing cap, in the output unit
 %
 % Author
 %	2026/03/04, En-Chi Lee (williameclee@arizona.edu)
+%
+% Last modified
+%	2026/03/23, En-Chi Lee (williameclee@arizona.edu)
+%     - Switched to iterative algorithm with the correct objective
 
-function [pcapLonlat, radius] = enclosingCap(domain, options)
+function [clonlat, radius] = enclosingCap(domain, options)
 
     arguments (Input)
         domain
+        options.maxIters (1, 1) {mustBePositive, mustBeInteger} = 1000
         options.InputUnit ...
             {mustBeMember(options.InputUnit, {'degrees', 'radians'})} = 'degrees'
         options.OutputUnit ...
@@ -44,41 +54,42 @@ function [pcapLonlat, radius] = enclosingCap(domain, options)
     end
 
     arguments (Output)
-        pcapLonlat (1, 2) {mustBeNumeric}
+        clonlat (1, 2) {mustBeNumeric, mustBeFinite}
         radius (1, 1) {mustBeNumeric, mustBePositive}
     end
 
     lonlat = domainToLonlat(domain, "AddAnchors", true, ...
         "InputUnit", options.InputUnit, "OutputUnit", "degrees");
 
-    % Find the longest distance between 2 points on the boundary
-    maxDists = zeros(length(lonlat), 1);
-    maxDistLonlats = zeros(length(lonlat), 4);
+    lonlat = lonlat(~any(isnan(lonlat), 2), :); % Remove any rows with NaN values
 
-    for i = 1:length(lonlat)
-        dists = distance(lonlat(i, 2), lonlat(i, 1), lonlat(:, 2), lonlat(:, 1));
-        [maxDists(i), idx] = max(dists);
-        maxDistLonlats(i, :) = [lonlat(i, :), lonlat(idx, :)];
+    xyz = ...
+        [cosd(lonlat(:, 2)) .* cosd(lonlat(:, 1)), ...
+         cosd(lonlat(:, 2)) .* sind(lonlat(:, 1)), ...
+         sind(lonlat(:, 2))];
+
+    % Start from the centroid
+    cxyz = mean(xyz, 1);
+    cxyz = cxyz / norm(cxyz);
+
+    for iIter = 1:options.maxIters
+        % Find the furthest point
+        dists = xyz * cxyz';
+        [~, jMin] = min(dists);
+        farthestXyz = xyz(jMin, :);
+
+        % Move the centre towards the furthest point
+        stepSize = 1 / (iIter + 1);
+        cxyz = cxyz + stepSize * (farthestXyz - cxyz);
+        cxyz = cxyz / norm(cxyz);
     end
 
-    [maxDist, idx] = max(maxDists);
-    maxDistLonlat = maxDistLonlats(idx, :);
-
-    % Find the centre of the cap as the midpoint of the longest distance
-    p1Xyz = [0, 0, 0];
-    p2Xyz = [0, 0, 0];
-    [p1Xyz(1), p1Xyz(2), p1Xyz(3)] = sph2cart( ...
-        deg2rad(maxDistLonlat(1)), deg2rad(maxDistLonlat(2)), 1);
-    [p2Xyz(1), p2Xyz(2), p2Xyz(3)] = sph2cart( ...
-        deg2rad(maxDistLonlat(3)), deg2rad(maxDistLonlat(4)), 1);
-    pmXyz = (p1Xyz + p2Xyz) / 2;
-    [pcapLonr, pcapLatr, ~] = cart2sph(pmXyz(1), pmXyz(2), pmXyz(3));
-    pcapLonlat = [wrapTo360(rad2deg(pcapLonr)), rad2deg(pcapLatr)];
-
-    radius = maxDist / 2;
+    % Project back to lonlat and calculate the radius
+    clonlat = [wrapTo360(atan2d(cxyz(2), cxyz(1))), asind(cxyz(3))];
+    radius = acosd(min(min(xyz * cxyz'), 1));
 
     if strcmp(options.OutputUnit, 'radians')
-        pcapLonlat = deg2rad(pcapLonlat);
+        clonlat = deg2rad(clonlat);
         radius = deg2rad(radius);
     end
 
@@ -91,10 +102,10 @@ function [pcapLonlat, radius] = enclosingCap(domain, options)
     plot(lonlat(:, 1), lonlat(:, 2), 'k');
     hold on
     scatter(maxDistLonlat([1, 3]), maxDistLonlat([2, 4]), 'b')
-    plot([maxDistLonlat(1), pcapLonlat(1), maxDistLonlat(3)], ...
-        [maxDistLonlat(2), pcapLonlat(2), maxDistLonlat(4)], ...
+    plot([maxDistLonlat(1), clonlat(1), maxDistLonlat(3)], ...
+        [maxDistLonlat(2), clonlat(2), maxDistLonlat(4)], ...
     'b')
-    scatter(pcapLonlat(1), pcapLonlat(2), 'r')
+    scatter(clonlat(1), clonlat(2), 'r')
     hold off
 
     title('Enclosing Cap')
