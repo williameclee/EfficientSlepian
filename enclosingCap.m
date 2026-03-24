@@ -21,6 +21,8 @@
 %       The unit is specified by the InputUnit option.
 %     - A GeoDomain object (from the ULMO package)
 %       See DOMAINTOLONLAT for details.
+%   maxIters (name-value) - Maximum number of iterations for the algorithm
+%       The default number is 1000.
 %   InputUnit (name-value) - Unit of the input coordinates ("degrees" or
 %       "radians")
 %       This option only matters if the input domain is a numeric array.
@@ -31,7 +33,7 @@
 %
 % Output arguments
 %   clonlat - Longitude and latitude of the centre of the enclosing cap,
-%       in the output unit.
+%       in the output unit
 %       Size: [1 x 2]
 %   radius - Radius of the enclosing cap, in the output unit
 %
