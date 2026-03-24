@@ -302,7 +302,7 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
     end
 
     N = (L + 1) ^ 2 * spharea(pLonlatd);
-    V = pSlepConcs(:); % Concentrations (eigenvalues)
+    V = reshape(pSlepConcs, 1, []); % Concentrations (eigenvalues)
 
     if any(V > 1)
         warning("slepian:efficientSlepian:invalidEigenvalues", ...
