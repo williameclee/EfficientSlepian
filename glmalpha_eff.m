@@ -160,7 +160,7 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     pcapConcThreshold = options.pcapConcThreshold;
 
-    %% Prcoputation check
+    %% Precomputation check
     dataPath = getoutputfile(domain, L, pcapConcThreshold, rotb, options);
 
     vars = {'G', 'V', 'N', 'K'};
