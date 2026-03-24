@@ -80,12 +80,7 @@
 %       Size: [(L+1)^2 x numFuns], where numFuns is the number of Slepian
 %       functions returned (after truncation, if applicable)
 %   V - Concentration eigenvalues in descending order
-%       The first row contains the eigenvalues of the polar cap Slepian
-%       functions, and the second row contains the eigenvalues of the
-%       Slepian functions for the rotated domain relative to the polar cap
-%       Slepian basis. That is, they are not comparable to the eigenvalues
-%       from GLMALPHA.
-%       Size: [2 x numFuns]
+%       Size: [1 x numFuns]
 %   N - Shannon number
 %       Estimated number of well-concentrated functions, proportional to the
 %       area of the domain and the squared bandwidth.
@@ -103,6 +98,10 @@
 %	2026/03/05, En-Chi Lee (williameclee@arizona.edu)
 %
 % Last modified
+%	2026/03/24, En-Chi Lee (williameclee@arizona.edu)
+%     - Fixed incorrect description of the eigenvalues and changed the
+%       output format to only return the final Slepian function
+%       concentrations (matching GLNALPHA)
 %	2026/03/20, En-Chi Lee (williameclee@arizona.edu)
 %     - Saved results to disc for reuse
 %     - Made the localisation matrix an output argument
@@ -135,7 +134,7 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
 
     arguments (Output)
         G (:, :) {mustBeReal, mustBeFinite}
-        V (2, :) {mustBeNonnegative}
+        V (1, :) {mustBeNonnegative}
         N (1, 1) {mustBePositive}
         K (:, :) {mustBeReal, mustBeFinite}
     end
@@ -188,7 +187,7 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
 
             if truncation <= size(G, 2)
                 G = G(:, 1:truncation);
-                V = V(:, 1:truncation);
+                V = V(1:truncation);
             else
                 warning( ...
                     ['Truncation level (%d) is larger than the number of loaded functions (%d). ', ...
@@ -267,15 +266,15 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
     % over the rotated domain
     switch options.IntegrationMethod
         case "gl"
-            K = localisationMatrix(...
+            K = localisationMatrix( ...
                 L, pcapGs, pcapMs, radiusd, pLonlatd, options.GlNodes);
         case "grid"
-            K = localisationMatrix_grid(...
+            K = localisationMatrix_grid( ...
                 L, pcapGs, pcapMs, radiusd, pLonlatd, options.GridResFactor);
         otherwise
             error("slepian:efficientSlepian:invalidIntegrationMethod", ...
                 ['Integration method must be either "gl" or "grid", ', ...
-                'but got invalid option "%s".'], ...
+             'but got invalid option "%s".'], ...
                 options.IntegrationMethod);
     end
 
@@ -303,9 +302,9 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
     end
 
     N = (L + 1) ^ 2 * spharea(pLonlatd);
-    V = [pcapConcs(:), pSlepConcs(:)].'; % Concentrations (eigenvalues)
+    V = pSlepConcs(:); % Concentrations (eigenvalues)
 
-    if any(V > 1, "all")
+    if any(V > 1)
         warning("slepian:efficientSlepian:invalidEigenvalues", ...
             '%d eigenvalues are greater than 1 (max: %.3f), which should not happen.', ...
             sum(V > 1, "all"), max(V, [], "all"));
@@ -331,7 +330,7 @@ function [G, V, N, K] = glmalpha_eff(domain, L, truncation, rotb, options)
 
         if truncation <= numFuns
             G = G(:, 1:truncation);
-            V = V(:, 1:truncation);
+            V = V(1:truncation);
         else
             warning( ...
                 ['Truncation level (%d) is larger than the number of computed functions (%d). ', ...
