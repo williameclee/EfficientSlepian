@@ -88,28 +88,69 @@ function [clonlat, radius] = enclosingCap(domain, options)
     clonlat = [wrapTo360(atan2d(cxyz(2), cxyz(1))), asind(cxyz(3))];
     radius = acosd(min(min(xyz * cxyz'), 1));
 
-    if strcmp(options.OutputUnit, 'radians')
-        clonlat = deg2rad(clonlat);
-        radius = deg2rad(radius);
-    end
-
     if nargout > 0
+
+        if strcmp(options.OutputUnit, 'radians')
+            clonlat = deg2rad(clonlat);
+            radius = deg2rad(radius);
+        end
+
         return
     end
 
     %% Visualisation
-    figure
-    plot(lonlat(:, 1), lonlat(:, 2), 'k');
-    hold on
-    scatter(maxDistLonlat([1, 3]), maxDistLonlat([2, 4]), 'b')
-    plot([maxDistLonlat(1), clonlat(1), maxDistLonlat(3)], ...
-        [maxDistLonlat(2), clonlat(2), maxDistLonlat(4)], ...
-    'b')
-    scatter(clonlat(1), clonlat(2), 'r')
-    hold off
+    makeDemoPlot(lonlat, clonlat, radius)
+end
 
-    title('Enclosing Cap')
-    xlabel('Longitude')
-    ylabel('Latitude')
+%% Subfunctions
+function makeDemoPlot(lonlat, clonlat, radius)
+    xyz = [cosd(lonlat(:, 2)) .* cosd(lonlat(:, 1)), ...
+               cosd(lonlat(:, 2)) .* sind(lonlat(:, 1)), ...
+               sind(lonlat(:, 2))];
+
+    % The boundary of the polar cap in Cartesian coordinates
+    nPts = 100;
+    pcapXyz = [zeros(nPts, 2), ones(nPts, 1)] * cosd(radius);
+    pcapXyz(:, 1) = sind(radius) * cosd(linspace(0, 360, nPts));
+    pcapXyz(:, 2) = sind(radius) * sind(linspace(0, 360, nPts));
+
+    % Rotate the boundary points to be centered at capLonlat
+    theta = 90 - clonlat(2); % polar angle
+    phi = clonlat(1); % azimuthal angle
+    Rcol = [cosd(theta), 0, sind(theta); 0, 1, 0; -sind(theta), 0, cosd(theta)];
+    Rlon = [cosd(phi), sind(phi), 0; sind(phi), -cosd(phi), 0; 0, 0, 1];
+    R = Rlon * Rcol;
+    capXyz = (R * pcapXyz')';
+    capLonlat = ...
+        [atan2d(capXyz(:, 2), capXyz(:, 1)), ...
+         asind(capXyz(:, 3))];
+    capLonlat(:, 1) = mod(capLonlat(:, 1), 360); % Ensure longitudes are in [0, 360]
+
+    % Visualize the points and the enclosing cap
+    figure
+    subplot(1, 2, 1)
+
+    hold on
+    plot(lonlat(:, 1), lonlat(:, 2), 'b')
+    plot(capLonlat(:, 1), capLonlat(:, 2), 'r')
+    scatter(clonlat(1), clonlat(2), 'ro', 'filled')
+    hold off
     axis equal tight
+    xlabel('Longitude [°]')
+    ylabel('Latitude [°]')
+
+    subplot(1, 2, 2)
+    hold on
+    plot3(xyz(:, 1), xyz(:, 2), xyz(:, 3), 'b')
+    plot3(capXyz(:, 1), capXyz(:, 2), capXyz(:, 3), 'r')
+    scatter3(cosd(clonlat(2)) * cosd(clonlat(1)), cosd(clonlat(2)) * sind(clonlat(1)), sind(clonlat(2)), 'ro', 'filled')
+    hold off
+    axis equal tight
+
+    % Change the view angle for better visualization
+    view(90 + clonlat(1), clonlat(2))
+
+    xlabel('X')
+    ylabel('Y')
+    zlabel('Z')
 end
