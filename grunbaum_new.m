@@ -86,7 +86,7 @@ function [E, Vg, th, C, T, V] = grunbaum_new(radius, L, m, nth, grd, xver)
 
     % Check normalization and calculate the eigenvalues
     % from a straightforward GL integration
-    [~, ~, ~, V] = orthocheck_new(C, Vg, deg2rad(radius), m, [], [], [], true);
+    [~, ~, ~, V] = orthocheck_new(C, Vg, deg2rad(radius), m, "BeQuiet", true);
 
     if nth == 0
         E = 0;

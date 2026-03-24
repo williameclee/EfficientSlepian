@@ -33,17 +33,28 @@
 %
 % Last modified
 %   2026/03/20, En-Chi Lee (williameclee@arizona.edu)
-%     - Ported from the local, modified version of SLEPIAN_ALPHA. No 
+%     - Ported from the local, modified version of SLEPIAN_ALPHA. No
 %       behavioural, just an additional argument to supress log messages
 %   2012/07/11, fjsimons@alum.mit.edu
 
 function [ngl1, ngl2, com, Vc, nofa, zmean] = ...
-        orthocheck_new(C, V, TH, m, sord, ntw, cmean, beQuiet)
+        orthocheck_new(C, V, TH, m, sord, ntw, cmean, options)
 
-    defval('sord', 1)
-    defval('ntw', 0)
-    defval('cmean', 0)
-    defval('beQuiet', false)
+    arguments (Input)
+        C
+        V
+        TH
+        m
+        sord (1, 1) {mustBeNumeric, mustBeInteger} = 1
+        ntw (1, 1) {mustBeNumeric} = 0
+        cmean (1, 1) {mustBeNumeric} = 0
+        options.BeQuiet (1, 1) logical = false
+    end
+
+    % defval('sord', 1)
+    % defval('ntw', 0)
+    % defval('cmean', 0)
+    % defval('beQuiet', false)
 
     % Set tolerance level
     tol = 10 ^ -12;
@@ -109,7 +120,7 @@ function [ngl1, ngl2, com, Vc, nofa, zmean] = ...
         ngl1 = ngl(index);
         com = NaN;
 
-        if index == length(ngl) && index > 1 && ~beQuiet
+        if index == length(ngl) && index > 1 && ~options.BeQuiet
             disp('Could do with more integration accuracy')
         end
 
@@ -215,7 +226,7 @@ function [ngl1, ngl2, com, Vc, nofa, zmean] = ...
         [err(3), ~] = min(trerr);
         ngl2 = ngl(index);
 
-        if index == length(ngl) && index > 1 && ~beQuiet
+        if index == length(ngl) && index > 1 && ~options.BeQuiet
             disp('Could do with more integration accuracy')
         end
 
@@ -225,11 +236,11 @@ function [ngl1, ngl2, com, Vc, nofa, zmean] = ...
     if ntw == 0
 
         if any(err > tol)
-            warning('ORTHOCHECK Normalization criteria NOT satisfied; mean errror %8.3e', ...
+            warning('ORTHOCHECK Normalization criteria NOT satisfied; mean error %8.3e', ...
                 mean(err))
-        elseif ~beQuiet
-            fprintf('ORTHOCHECK Normalization criteria satisfied to %8.3e\n', ...
-                mean(err))
+        elseif ~options.BeQuiet
+            fprintf('[SLEPIAN>%s] Normalisation criteria satisfied to %8.3e\n', ...
+                mfilename, mean(err))
         end
 
         nofa = NaN;
